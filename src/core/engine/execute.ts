@@ -1,7 +1,9 @@
-import { Token, ASTNode, Operand } from "../parser/types";
-import parserToAST from "../parser/syntax";
+import { Token, ASTNode, Operand, Lexem } from "../parser/types";
+import parserToAST, { convertToRnp } from "../parser/syntax";
 import tokenizing from "../parser/tokenizing";
 import { deepLog } from "../../services/logger";
+import { readFileSync, writeFileSync } from "fs";
+import ParsingError from "../errors/ParsingError";
 
 const toBool = (value: string) => {
     if (typeof value === "string") {
@@ -14,7 +16,7 @@ const toBool = (value: string) => {
 
 const isASTNode = (x: any) => x instanceof ASTNode;
 
-const execute = (node: ASTNode): boolean | ASTNode => {
+const execute = (node: ASTNode): boolean => {
     const { operands, operator, calc } = node;
 
     const reCalc = (node: ASTNode) => (execute(node) ? "1" : "0");
@@ -42,18 +44,42 @@ const execute = (node: ASTNode): boolean | ASTNode => {
     return calc(toBool(leftValue), toBool(rightValue));
 };
 
-const getArgs = () =>
-    process.argv
-        .slice(2)
-        .join()
-        .replace(/\-\-exp=/g, "");
+const PATH = __dirname + "/../../../execute.playground";
 
-const root = parserToAST(tokenizing(getArgs()));
+const getInput = () => {
+    const file = readFileSync(PATH);
+    const [content, exp] = /{#(.*)#}/gs.exec(file.toString()) || [];
 
-deepLog({ root });
+    if (exp) return [content, exp];
 
-console.time();
-console.log("=".repeat(170));
-console.log("\nResult: ", execute(root), "\n");
-console.log("=".repeat(170));
-console.timeEnd();
+    throw new ParsingError("Expression", "null");
+};
+
+const toInput = (list: Lexem[]) => list.map(x => x.value).join(" ");
+
+const buildOutput = (
+    input: string,
+    result: boolean | string,
+    root: ASTNode,
+    lexems: Lexem[]
+) => `${input}\n
+Expression:  ${toInput(lexems)} 
+RNP:         ${toInput(convertToRnp(lexems))}\n
+==========================\n
+result:     ${result}\n
+==========================\n
+AST: \n${JSON.stringify(root, null, 4)}`;
+
+const process = () => {
+    const [content, exp] = getInput();
+
+    try {
+        const lexems = tokenizing(exp);
+        const root = parserToAST(lexems);
+        return buildOutput(content, execute(parserToAST(lexems)), root, lexems);
+    } catch (error) {
+        return `${content}\n ERROR:\n${JSON.stringify(error, null, 4)}`;
+    }
+};
+
+writeFileSync(PATH, process());

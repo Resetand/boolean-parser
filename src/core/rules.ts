@@ -4,7 +4,7 @@ import { reBuilder } from "./parser/utils";
 export const rules: Rules = {
     negative: {
         type: Token.UNARY_OP,
-        key: reBuilder("!", "^"),
+        key: reBuilder("!"),
         precedence: 6,
         calc: op => !op
     },
@@ -23,17 +23,24 @@ export const rules: Rules = {
         calc: (op1, op2) => op1 || op2
     },
 
+    xor: {
+        type: Token.BINARY_OP,
+        key: reBuilder("^"),
+        precedence: 3,
+        calc: (op1, op2) => op1 !== op2 && (op1 || op2)
+    },
+
     implication: {
         type: Token.BINARY_OP,
         key: reBuilder("-->", "->"),
-        precedence: 3,
+        precedence: 2,
         calc: (op1, op2) => !op1 || op2
     },
 
     equivalent: {
         type: Token.BINARY_OP,
         key: reBuilder("~"),
-        precedence: 2,
+        precedence: 1,
         calc: (op1, op2) => op1 === op2
     },
 

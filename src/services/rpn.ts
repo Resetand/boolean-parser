@@ -1,4 +1,5 @@
 import { makeStack } from "../core/parser/utils";
+import { Token } from "../core/parser/types";
 
 interface Operator {
     precedence: number;
@@ -74,7 +75,11 @@ const toRnp: RnpConverter = lexems => {
                     const op = (lexem as any) as Operator;
                     const peek = () => (ops.peek() as any) as Operator;
 
-                    while (peek() && peek().precedence >= op.precedence) {
+                    while (
+                        peek() &&
+                        peek().precedence >= op.precedence &&
+                        (peek() as any).type !== Token.UNARY_OP
+                    ) {
                         output.push(ops.pop()!);
                     }
                     ops.push(lexem);
